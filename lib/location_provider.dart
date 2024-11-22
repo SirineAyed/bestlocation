@@ -24,13 +24,17 @@ class LocationProvider with ChangeNotifier {
   Future<void> loadLocations() async {
     final prefs = await SharedPreferences.getInstance();
     final locationsJson = prefs.getStringList('locations') ?? [];
-    _locations = locationsJson.map((json) => LocationModel.fromMap(Map<String, dynamic>.from(jsonDecode(json)))).toList();
+    _locations = locationsJson
+        .map((json) =>
+            LocationModel.fromMap(Map<String, dynamic>.from(jsonDecode(json))))
+        .toList();
     notifyListeners();
   }
 
   Future<void> saveLocations() async {
     final prefs = await SharedPreferences.getInstance();
-    final locationsJson = _locations.map((location) => jsonEncode(location.toMap())).toList();
+    final locationsJson =
+        _locations.map((location) => jsonEncode(location.toMap())).toList();
     await prefs.setStringList('locations', locationsJson);
   }
 }

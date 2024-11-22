@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'location_model.dart';
 import 'package:provider/provider.dart';
 import 'location_provider.dart';
+
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -26,108 +27,81 @@ class _HomeScreenState extends State<HomeScreen> {
   );
   String number = '';
   String pseudo = '';
-  Timer? _timer;
+  StreamSubscription<Position>? _positionStreamSubscription;
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
-    _startLocationUpdateTimer();
+    _startLocationUpdateStream();
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); 
+    _positionStreamSubscription?.cancel(); 
     super.dispose();
   }
 
-
-
-Future<void> _getCurrentLocation() async {
-  bool serviceEnabled;
-  LocationPermission permission;
-
-  // Vérifie si le service de localisation est activé
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    // Le service de localisation est désactivé, informez l'utilisateur
-    return Future.error('Location services are disabled.');
-  }
-
-  // Vérifie la permission
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    // Demande la permission
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) {
-      // La permission est refusée, informez l'utilisateur
-      return Future.error('Location permissions are denied');
-    }
-  }
-
-  if (permission == LocationPermission.deniedForever) {
-    // La permission est refusée de manière permanente, informez l'utilisateur
-    return Future.error(
-        'Location permissions are permanently denied, we cannot request permissions.');
-  }
-
-  // Obtient la position actuelle
-  final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high);
-  setState(() {
-    currentPosition = position;
-  });
-}
-
- void _startLocationUpdateTimer() {
-  _timer = Timer.periodic(Duration(minutes: 1), (timer) async {
+  Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-  
       return Future.error('Location services are disabled.');
     }
 
-   
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-     
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-       
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
+      return Future.error('Location permissions are permanently denied, we cannot request permissions.');
     }
 
-   
     final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
     setState(() {
       currentPosition = position;
     });
-  });
-}
+  }
+
+  void _startLocationUpdateStream() {
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 1, // Mise à jour chaque mètre
+      ),
+    ).listen((newPosition) {
+      if (newPosition.latitude != currentPosition.latitude || newPosition.longitude != currentPosition.longitude) {
+        setState(() {
+          currentPosition = newPosition;
+        });
+
+        // Sauvegarder la nouvelle position si elle a changé
+        _saveLocation();
+      }
+    });
+  }
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
 
   void _saveLocation() {
-    final location = LocationModel(
-      latitude: currentPosition.latitude,
-      longitude: currentPosition.longitude,
-      number: number,
-      pseudo: pseudo,
-    );
-    Provider.of<LocationProvider>(context, listen: false).addLocation(location);
+    if (pseudo.isNotEmpty && number.isNotEmpty) {
+      final location = LocationModel(
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+        number: number,
+        pseudo: pseudo,
+      );
+      Provider.of<LocationProvider>(context, listen: false).addLocation(location);
+    }
   }
 
   @override
