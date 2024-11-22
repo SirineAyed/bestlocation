@@ -104,6 +104,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showEditDialog(LocationModel location, int index) {
+    TextEditingController numberController = TextEditingController(text: location.number);
+    TextEditingController pseudoController = TextEditingController(text: location.pseudo);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Location'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: numberController,
+                decoration: InputDecoration(labelText: 'Number'),
+              ),
+              TextField(
+                controller: pseudoController,
+                decoration: InputDecoration(labelText: 'Pseudo'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final updatedLocation = LocationModel(
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  number: numberController.text,
+                  pseudo: pseudoController.text,
+                );
+                Provider.of<LocationProvider>(context, listen: false).updateLocation(index, updatedLocation);
+                Navigator.of(context).pop();
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,6 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: () {
+                              _showEditDialog(location, index);
+                            },
+                          ),
                           IconButton(
                             icon: Icon(Icons.map),
                             onPressed: () {
